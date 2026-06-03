@@ -1,7 +1,13 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, query
 from fastapi import HTTPException
+from sqlalchemy.testing.pickleable import User
+
 from app.models import Workspace
 from app.models import Project
+from app.models import Users
+from app.auth import hash_password
+from app.auth import verify_password
+from app.auth import create_access_token
 def create_workspace(db, workspace):
     existing_workspace=(
         db.query(Workspace)
@@ -41,6 +47,19 @@ def create_project(db:Session,workspace_id: int,project):
     db.commit()
     db.refresh(obj)
     return obj
+#post registration route
+def create_user(db:Session,user):
+    existing_user=(db.query(Users)
+                   .filter(Users.user_name==user.username).first())
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User already exists")
+    db_user=Users(user_name=user.username,password_hash=hash_password(user.password))
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return {"message": "User created successfully"}
+
+
 #GET
 def get_workspace(db: Session, workspace_id: int):
     workspace=(
@@ -69,3 +88,34 @@ def delete_workspace(db: Session, workspace_id: int):
     db.commit()
 
     return {"message": "Workspace deleted successfully"}
+def login_user(db: Session, user):
+
+    db_user = (
+        db.query(Users)
+        .filter(Users.user_name == user.username)
+        .first()
+    )
+
+    if not db_user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid username or password"
+        )
+
+    if not verify_password(
+        user.password,
+        db_user.password_hash
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid username or password"
+        )
+
+    token = create_access_token(
+        {"sub": db_user.user_name}
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer"
+    }

@@ -8,6 +8,8 @@ class Workspace(Base):
     workspace_name = Column(String,nullable = False)
     description=Column(String,nullable = False)
     projects= relationship("Project", back_populates="workspace")
+    summary=Column(String)
+    status=Column(String)
 class Project(Base):
     __tablename__ = 'projects'
     id = Column(Integer, primary_key=True)
@@ -17,6 +19,14 @@ class Project(Base):
     summary=Column(String)
     status = Column(String, default="pending")
     workspace=relationship("Workspace", back_populates="projects")
+class Users(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True)
+    user_name = Column(String,unique=True,nullable = False)
+    password_hash= Column(String,nullable = False)
+
+    
+
 
 
 
