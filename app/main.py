@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi import Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.dependencies import get_db
+from app.models import Project
 from app.schemas import WorkspaceCreate
 from app.schemas import ProjectCreate
 from app.crud import create_workspace
@@ -17,6 +19,14 @@ from app.auth import get_current_user
 from fastapi.security import OAuth2PasswordRequestForm
 Base.metadata.create_all(bind=engine)
 app = FastAPI()
+# ─── 2. ADD THIS CORS MIDDLEWARE CONFIGURATION ───
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"], # Allows your Vite frontend port
+    allow_credentials=True,
+    allow_methods=["*"],                     # Allows GET, POST, PUT, DELETE
+    allow_headers=["*"],                     # Allows Authorization & Content-Type headers
+)
 @app.get("/")
 def home():
     return {"Workspace : running"}
@@ -42,6 +52,12 @@ def remove_workspace(
     db: Session = Depends(get_db)
 ):
     return (delete_workspace(db, workspace_id))
+@app.get("/workspaces/{workspace_id}/projects")
+def get_workspace_projects(workspace_id: int, db: Session = Depends(get_db)):
+    # 1. Query your Postgres DB for projects where workspace_id == workspace_id
+    projects = db.query(Project).filter(Project.workspace_id == workspace_id).all()
+    # 2. Return them as a list
+    return projects
 @app.post("/login")
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
